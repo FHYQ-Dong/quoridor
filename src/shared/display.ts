@@ -27,6 +27,40 @@ export class GameDisplay {
             this.context.lineTo(this.size, i * unit);
         }
         this.context.stroke();
+        if (state.players.length === 2) {
+            this.context.strokeStyle = 'red'
+            this.context.beginPath();
+            this.context.moveTo(0, 1);
+            this.context.lineTo(this.size, 1);
+            this.context.stroke();
+            this.context.strokeStyle = 'blue'
+            this.context.beginPath();
+            this.context.moveTo(0, this.size - 1);
+            this.context.lineTo(this.size, this.size - 1);
+            this.context.stroke();
+        }
+        else {
+            this.context.strokeStyle = 'red'
+            this.context.beginPath();
+            this.context.moveTo(0, 1);
+            this.context.lineTo(this.size, 1);
+            this.context.stroke();
+            this.context.strokeStyle = 'blue'
+            this.context.beginPath();
+            this.context.moveTo(this.size - 1, 0);
+            this.context.lineTo(this.size - 1, this.size);
+            this.context.stroke();
+            this.context.strokeStyle = 'green'
+            this.context.beginPath();
+            this.context.moveTo(0, this.size - 1);
+            this.context.lineTo(this.size, this.size - 1);
+            this.context.stroke();
+            this.context.strokeStyle = 'yellow'
+            this.context.beginPath();
+            this.context.moveTo(1, 0);
+            this.context.lineTo(1, this.size);
+            this.context.stroke();
+        }
     }
     renderPlayers(state: GameState) {
         const unit = this.getUnit(state.players.length);

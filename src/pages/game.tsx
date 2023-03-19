@@ -23,7 +23,7 @@ export default function Game() {
     }
   );
   const [phase, setPhase] = useState(PREPARE);
-  const [prepared, setPrepared] = useState(config.players === 4 ? [false, false, false, false]: [false, false])
+  const [prepared, setPrepared] = useState([false, false, false, false])
   const [game, setGame] = useState<GameLogic>();
   const [gameDisplay, setGameDisplay] = useState<GameDisplay>();
   const [gameTurn, setGameTurn] = useState(config.players-1);
@@ -39,7 +39,10 @@ export default function Game() {
   const cheatModal = useDisclosure();
   const finishModal = useDisclosure();
   useEffect(() => {
-    setConfig(JSON.parse(decodeURIComponent(parseQuery().config)));
+    const config = JSON.parse(decodeURIComponent(parseQuery().config));
+    setConfig(config);
+    if (config.players === 2)
+      setPrepared([false, false])
   }, []);
   useEffect(() => {
     if (prepared.every(x => x)) {
