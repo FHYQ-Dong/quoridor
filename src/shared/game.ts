@@ -247,7 +247,7 @@ export class Game {
                 jump: false
             });
         }
-        candidates.push(...this.testJumpChoices(point));
+        candidates.push(...this.jumpChoices(point));
         return candidates;
     }
     sideDistance(point: Point, direction: Direction): number {
@@ -258,20 +258,27 @@ export class Game {
             case Direction.BOTTOM: return this.side-point[1]-1;
         }
     }
-    testJumpChoices(point: Point, previous?: Direction): MoveChoice[] {
+    jumpChoices(point: Point, previous?: Direction, depth?: number): MoveChoice[] {
+        depth = depth ?? 0;
+        if (depth >= 4) {
+            return [];
+        }
+        depth++;
         const jumpTo = (direction: Direction) => {
             if (this.hasPlayerAt(beside(point, direction, 2))) {
-                candidates.push(...this.testJumpChoices(
+                candidates.push(...this.jumpChoices(
                     beside(point, direction),
-                    direction
+                    direction,
+                    depth
                 ));
             }
             else if (this.validBoardAt(beside(point, direction), direction) || this.sideDistance(point, direction) === 1) {
                 if (!this.validBoardAt(beside(point, direction), leftSide(direction)) && this.sideDistance(point, leftSide(direction)) !== 0) {
                     if (this.hasPlayerAt(beside(beside(point, direction), leftSide(direction)))) {
-                        candidates.push(...this.testJumpChoices(
+                        candidates.push(...this.jumpChoices(
                             beside(point, direction),
-                            leftSide(direction)
+                            leftSide(direction),
+                            depth
                         ))
                     }
                     else
@@ -282,9 +289,10 @@ export class Game {
                 }
                 if (!this.validBoardAt(beside(point, direction), rightSide(direction)) && this.sideDistance(point, rightSide(direction)) !== 0) {
                     if (this.hasPlayerAt(beside(beside(point, direction), rightSide(direction)))) {
-                        candidates.push(...this.testJumpChoices(
+                        candidates.push(...this.jumpChoices(
                             beside(point, direction),
-                            rightSide(direction)
+                            rightSide(direction),
+                            depth
                         ))
                     }
                     else
@@ -324,134 +332,6 @@ export class Game {
             if (canJump(Direction.BOTTOM)) jumpTo(Direction.BOTTOM);
         }
         return candidates
-    }
-    jumpChoices(point: Point, excludeDirection?: Direction): MoveChoice[] {
-        const candidates: MoveChoice[] = [];
-        if (excludeDirection !== Direction.LEFT && 
-            this.hasPlayerAt(beside(point, Direction.LEFT)) &&
-            !this.validBoardAt(point, Direction.LEFT))
-        {
-            if (this.hasPlayerAt(beside(point, Direction.LEFT, 2))) {
-                candidates.push(...this.jumpChoices(
-                    beside(point, Direction.LEFT),
-                    Direction.RIGHT
-                ));
-            }
-            else if (this.validBoardAt(beside(point, Direction.LEFT), Direction.LEFT) || point[0] === 1) {
-                if (!this.validBoardAt(beside(point, Direction.LEFT), Direction.TOP) && point[1] !== 0) {
-                    candidates.push({
-                        to: beside(beside(point, Direction.LEFT), Direction.TOP),
-                        jump: true
-                    })
-                }
-                if (!this.validBoardAt(beside(point, Direction.LEFT), Direction.BOTTOM) && point[1] !== this.side) {
-                    candidates.push({
-                        to: beside(beside(point, Direction.LEFT), Direction.BOTTOM),
-                        jump: true
-                    })
-                }
-            }
-            else {
-                candidates.push({
-                    to: beside(point, Direction.LEFT, 2),
-                    jump: true
-                })
-            }
-        }
-        if (excludeDirection !== Direction.TOP && 
-            this.hasPlayerAt(beside(point, Direction.TOP)) &&
-            !this.validBoardAt(point, Direction.TOP))
-        {
-            if (this.hasPlayerAt(beside(point, Direction.TOP, 2))) {
-                candidates.push(...this.jumpChoices(
-                    beside(point, Direction.TOP),
-                    Direction.BOTTOM
-                ));
-            }
-            else if (this.validBoardAt(beside(point, Direction.TOP), Direction.TOP) || point[1] === 1) {
-                if (!this.validBoardAt(beside(point, Direction.TOP), Direction.LEFT) && point[0] !== 0) {
-                    candidates.push({
-                        to: beside(beside(point, Direction.TOP), Direction.LEFT),
-                        jump: true
-                    })
-                }
-                if (!this.validBoardAt(beside(point, Direction.TOP), Direction.RIGHT) && point[0] !== this.side) {
-                    candidates.push({
-                        to: beside(beside(point, Direction.TOP), Direction.RIGHT),
-                        jump: true
-                    })
-                }
-            }
-            else {
-                candidates.push({
-                    to: beside(point, Direction.TOP, 2),
-                    jump: true
-                })
-            }
-        }
-        if (excludeDirection !== Direction.RIGHT && 
-            this.hasPlayerAt(beside(point, Direction.RIGHT)) &&
-            !this.validBoardAt(point, Direction.RIGHT))
-        {
-            if (this.hasPlayerAt(beside(point, Direction.RIGHT, 2))) {
-                candidates.push(...this.jumpChoices(
-                    beside(point, Direction.RIGHT),
-                    Direction.LEFT
-                ));
-            }
-            else if (this.validBoardAt(beside(point, Direction.RIGHT), Direction.RIGHT) || point[0] === this.side-1) {
-                if (!this.validBoardAt(beside(point, Direction.RIGHT), Direction.TOP) && point[1] !== 0) {
-                    candidates.push({
-                        to: beside(beside(point, Direction.RIGHT), Direction.TOP),
-                        jump: true
-                    })
-                }
-                if (!this.validBoardAt(beside(point, Direction.RIGHT), Direction.BOTTOM) && point[1] !== this.side) {
-                    candidates.push({
-                        to: beside(beside(point, Direction.RIGHT), Direction.BOTTOM),
-                        jump: true
-                    })
-                }
-            }
-            else {
-                candidates.push({
-                    to: beside(point, Direction.RIGHT, 2),
-                    jump: true
-                })
-            }
-        }
-        if (excludeDirection !== Direction.BOTTOM && 
-            this.hasPlayerAt(beside(point, Direction.BOTTOM)) &&
-            !this.validBoardAt(point, Direction.BOTTOM))
-        {
-            if (this.hasPlayerAt(beside(point, Direction.BOTTOM, 2))) {
-                candidates.push(...this.jumpChoices(
-                    beside(point, Direction.BOTTOM),
-                    Direction.TOP
-                ));
-            }
-            else if (this.validBoardAt(beside(point, Direction.BOTTOM), Direction.BOTTOM) || point[1] === this.side-1) {
-                if (!this.validBoardAt(beside(point, Direction.BOTTOM), Direction.LEFT) && point[0] !== 0) {
-                    candidates.push({
-                        to: beside(beside(point, Direction.BOTTOM), Direction.LEFT),
-                        jump: true
-                    })
-                }
-                if (!this.validBoardAt(beside(point, Direction.BOTTOM), Direction.RIGHT) && point[0] !== this.side) {
-                    candidates.push({
-                        to: beside(beside(point, Direction.BOTTOM), Direction.RIGHT),
-                        jump: true
-                    })
-                }
-            }
-            else {
-                candidates.push({
-                    to: beside(point, Direction.BOTTOM, 2),
-                    jump: true
-                })
-            }
-        }
-        return candidates;
     }
     isWinner(index: number): boolean {
         if (this.config.players === 2) {

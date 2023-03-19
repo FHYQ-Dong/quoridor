@@ -41,6 +41,7 @@ export default function Game() {
   useEffect(() => {
     const config = JSON.parse(decodeURIComponent(parseQuery().config));
     setConfig(config);
+    setTimerCounter(config.timer);
     if (config.players === 2)
       setPrepared([false, false])
   }, []);
