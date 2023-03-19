@@ -180,7 +180,7 @@ export default function Home() {
             </p>
             <RadioGroup defaultValue='2' onChange={e => {
               config.players = parseInt(e);
-              if (config.players === 4 && config.elapsed === 'board') {
+              if (config.players === 4 && config.elapsed !== 'lose') {
                 config.elapsed = 'lose';
               }
               setConfig({ ...config });
@@ -254,7 +254,7 @@ export default function Home() {
                 <Radio value='board' isDisabled={config.players !== 2 || config.boards < 0}>
                   +1 Board (opponent)
                 </Radio>
-                <Radio value='cheat' isDisabled={config.cheats <= 0}>
+                <Radio value='cheat' isDisabled={config.players !== 2 || config.cheats <= 0}>
                   +1 Cheat (opponent)
                 </Radio>
               </Stack>
