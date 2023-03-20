@@ -48,6 +48,11 @@ export interface BoardChoice {
     orientation: Orientation
 }
 
+export interface DestroyChoice {
+    hint: Point,
+    direction: Direction
+}
+
 export interface GameAction {
     player: number,
     type: string

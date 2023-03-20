@@ -1,4 +1,4 @@
-import { GameState, Point, Direction, Orientation, BoardState, pointEquals, BoardChoice, MoveChoice, beside, GameAction, leftSide, rightSide } from "./common";
+import { GameState, Point, Direction, Orientation, BoardState, pointEquals, BoardChoice, MoveChoice, beside, GameAction, leftSide, rightSide, DestroyChoice } from "./common";
 
 export interface GameConfig {
     players: number,
@@ -332,6 +332,34 @@ export class Game {
             if (canJump(Direction.BOTTOM)) jumpTo(Direction.BOTTOM);
         }
         return candidates
+    }
+    destroyChoices(point: Point): DestroyChoice[] {
+        const candidates: DestroyChoice[] = [];
+        if (this.validBoardAt(point, Direction.LEFT)) {
+            candidates.push({
+                hint: beside(point, Direction.LEFT),
+                direction: Direction.LEFT
+            });
+        }
+        if (this.validBoardAt(point, Direction.TOP)) {
+            candidates.push({
+                hint: beside(point, Direction.TOP),
+                direction: Direction.TOP
+            });
+        }
+        if (this.validBoardAt(point, Direction.RIGHT)) {
+            candidates.push({
+                hint: beside(point, Direction.RIGHT),
+                direction: Direction.RIGHT
+            });
+        }
+        if (this.validBoardAt(point, Direction.BOTTOM)) {
+            candidates.push({
+                hint: beside(point, Direction.BOTTOM),
+                direction: Direction.BOTTOM
+            });
+        }
+        return candidates;
     }
     isWinner(index: number): boolean {
         if (this.config.players === 2) {

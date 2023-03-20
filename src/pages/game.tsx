@@ -33,6 +33,7 @@ export default function Game() {
   const [losers, setLosers] = useState<number[]>([]);
   const [timerElapsed, setTimerElapsed] = useState(false);
   const [timerCounter, setTimerCounter] = useState(200);
+  const [destroying, setDestroying] = useState(false);
   const prepareModal = useDisclosure({
     defaultIsOpen: true
   });
@@ -41,7 +42,7 @@ export default function Game() {
   useEffect(() => {
     const config = JSON.parse(decodeURIComponent(parseQuery().config));
     setConfig(config);
-    setTimerCounter(config.timer);
+    setTimerCounter(config.timer * 10);
     if (config.players === 2)
       setPrepared([false, false])
   }, []);
@@ -67,6 +68,9 @@ export default function Game() {
   }, [phase]);
   useEffect(() => {
     gameDisplay?.render(game!.state);
+    if (destroying) {
+      gameDisplay!.renderDestroyChoices(game!.state, game!.destroyChoices(game!.state.players[gameTurn].position));
+    }
     const handler = (ev: any) => {
       const unit = gameDisplay!.getUnit(config.players);
       let baseX = Math.floor(ev.offsetX / unit);
@@ -97,7 +101,15 @@ export default function Game() {
     let current = '';
     let choices: any[] | undefined;
     const handleClick = (point: boolean, x: number, y: number) => {
-      if (current === 'move') {
+      if (destroying) {
+        let choice;
+        if (!point && (choice = game!.destroyChoices(game!.state.players[gameTurn].position).find(choice => pointEquals(choice.hint, [x, y])))) {
+          game!.validBoardAt(game!.state.players[gameTurn].position, choice.direction)!.destroyed = true;
+          setDestroying(false);
+          nextTurn();
+        }
+      }
+      else if (current === 'move') {
         if (point || !choices!.some(choice => pointEquals(choice.to, [x, y]))) {
           current = '';
           choices = undefined;
@@ -157,10 +169,10 @@ export default function Game() {
     return () => {
       document.getElementById('canvas')?.removeEventListener('click', handler);
     }
-  }, [game, gameDisplay, gameTurn, extendedRound, nextBoardLength]);
+  }, [game, gameDisplay, gameTurn, extendedRound, nextBoardLength, destroying]);
   useEffect(() => {
     let cancel: any = undefined;
-    if (phase === GAME) {
+    if (phase === GAME && config.timer > 0) {
       setTimerElapsed(false);
       cancel = timer(config.timer, () => {
         switch (config.elapsed) {
@@ -185,7 +197,7 @@ export default function Game() {
     return () => {
       cancel && cancel();
     }
-  }, [gameTurn, game])
+  }, [gameTurn, game, extendedRound])
   useEffect(() => {
     nextTurn();
   }, [winners, losers]);
@@ -199,6 +211,9 @@ export default function Game() {
     do {
       nextTurn = (nextTurn + 1) % config.players;
     } while (winners.includes(nextTurn) || losers.includes(nextTurn))
+    setNextBoardLength(2);
+    setExtendedRound(false);
+    setDestroying(false);
     setGameTurn(nextTurn);
   }
   function surrender() {
@@ -216,10 +231,10 @@ export default function Game() {
           </Box>
           <Stack direction='column' justifyContent='center'>
             <Box textAlign='center'>
-              <Heading size='2xl' color={ timerElapsed ? 'red.400' : 'black' }>
+              {config.timer > 0 ? <Heading size='2xl' color={ timerElapsed ? 'red.400' : 'black' }>
                 <span style={{ fontSize: '70px' }}>{Math.floor(timerCounter / 10)}</span>
                 .{timerCounter % 10}
-              </Heading>
+              </Heading> : undefined }
               <Stack direction='row' marginTop='50px' gap='10px'>
                 { game && game.state.players.map((player, index) => 
                 <Box 
@@ -400,7 +415,12 @@ export default function Game() {
                       !game.validBoardAt(game!.state.players[gameTurn].position, Direction.TOP) &&
                       !game.validBoardAt(game!.state.players[gameTurn].position, Direction.RIGHT) &&
                       !game.validBoardAt(game!.state.players[gameTurn].position, Direction.BOTTOM)
-                    }>Use!</Button>
+                    } onClick={() => {
+                      cheatModal.onClose();
+                      setDestroying(true);
+                      game!.state.players[gameTurn].cheated = true;
+                      game!.state.players[gameTurn].cheats -= 1;
+                    }}>Use!</Button>
                   </Stack>
                 </CardBody>
               </Card>

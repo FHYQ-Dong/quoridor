@@ -1,4 +1,4 @@
-import { BoardChoice, GameState, MoveChoice, Orientation, Point } from "./common";
+import { BoardChoice, DestroyChoice, Direction, GameState, MoveChoice, Orientation, Point } from "./common";
 
 export class GameDisplay {
     context: CanvasRenderingContext2D
@@ -147,6 +147,76 @@ export class GameDisplay {
             choice.hint[0] * unit,
             choice.hint[1] * unit,
             10, 0, Math.PI * 2);
+            this.context.fill()
+        }
+    }
+    renderDestroyChoices(state: GameState, choices: DestroyChoice[]) {
+        const unit = this.getUnit(state.players.length);
+        this.context.fillStyle = 'rgba(0, 255, 0, .5)';
+        for (const choice of choices) {
+            this.context.beginPath();
+            switch (choice.direction) {
+              case Direction.LEFT: {
+                this.context.moveTo(
+                  choice.hint[0] * unit + unit / 4,
+                  choice.hint[1] * unit + unit / 2);
+                this.context.lineTo(
+                  choice.hint[0] * unit + unit * 3 / 4,
+                  choice.hint[1] * unit + unit / 4);
+                this.context.lineTo(
+                  choice.hint[0] * unit + unit * 3 / 4,
+                  choice.hint[1] * unit + unit * 3 / 4);
+                this.context.moveTo(
+                  choice.hint[0] * unit + unit / 4,
+                  choice.hint[1] * unit + unit / 2);
+                break;
+              }
+              case Direction.RIGHT: {
+                this.context.moveTo(
+                  choice.hint[0] * unit + unit * 3 / 4,
+                  choice.hint[1] * unit + unit / 2);
+                this.context.lineTo(
+                  choice.hint[0] * unit + unit / 4,
+                  choice.hint[1] * unit + unit / 4);
+                this.context.lineTo(
+                  choice.hint[0] * unit + unit / 4,
+                  choice.hint[1] * unit + unit * 3 / 4);
+                this.context.moveTo(
+                  choice.hint[0] * unit + unit * 3 / 4,
+                  choice.hint[1] * unit + unit / 2);
+                break;
+              }
+              case Direction.TOP: {
+                this.context.moveTo(
+                  choice.hint[0] * unit + unit / 2,
+                  choice.hint[1] * unit + unit / 4);
+                this.context.lineTo(
+                  choice.hint[0] * unit + unit / 4,
+                  choice.hint[1] * unit + unit * 3 / 4);
+                this.context.lineTo(
+                  choice.hint[0] * unit + unit * 3 / 4,
+                  choice.hint[1] * unit + unit * 3 / 4);
+                this.context.moveTo(
+                  choice.hint[0] * unit + unit / 4,
+                  choice.hint[1] * unit + unit / 2);
+                break;
+              }
+              case Direction.BOTTOM: {
+                this.context.moveTo(
+                  choice.hint[0] * unit + unit / 2,
+                  choice.hint[1] * unit + unit * 3 / 4);
+                this.context.lineTo(
+                  choice.hint[0] * unit + unit * 3 / 4,
+                  choice.hint[1] * unit + unit / 4);
+                this.context.lineTo(
+                  choice.hint[0] * unit + unit / 4,
+                  choice.hint[1] * unit + unit / 4);
+                this.context.moveTo(
+                  choice.hint[0] * unit + unit / 2,
+                  choice.hint[1] * unit + unit * 3 / 4);
+                break;
+              }
+            }
             this.context.fill()
         }
     }

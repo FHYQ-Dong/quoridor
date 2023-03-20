@@ -226,12 +226,14 @@ export default function Home() {
                 config.elapsed = 'lose';
               }
               setConfig({ ...config });
-            }}>
+            }} isChecked={config.cheats > 0}>
               Enable Cheating
             </Checkbox>
             { config.cheats > 0 ?
-            <NumberInput value={config.cheats} min={1} onChange={(_, n) => {
+            <NumberInput value={config.cheats} min={1} 
+            onChange={(_, n) => {
               config.cheats = n;
+              setConfig({ ...config });
             }}>
               <NumberInputField />
               <NumberInputStepper>
@@ -240,6 +242,27 @@ export default function Home() {
               </NumberInputStepper>
             </NumberInput>
             : undefined}
+            <p style={{ marginTop: '5px' }}>
+              <strong>Timer</strong>
+            </p>
+            <Checkbox defaultChecked onChange={e => {
+              config.timer = e.target.checked ? 20 : 0;
+              setConfig({ ...config });
+            }} isChecked={config.timer > 0}>
+              Enable Timer
+            </Checkbox>
+            { config.timer > 0 ? <>
+            <NumberInput value={config.timer} min={1} 
+            onChange={(_, n) => {
+              config.timer = n;
+              setConfig({ ...config });
+            }}>
+              <NumberInputField />
+              <NumberInputStepper>
+                <NumberIncrementStepper />
+                <NumberDecrementStepper />
+              </NumberInputStepper>
+            </NumberInput>
             <p style={{ marginTop: '5px' }}>
               <strong>Timeout Punishment</strong>
             </p>
@@ -259,6 +282,7 @@ export default function Home() {
                 </Radio>
               </Stack>
             </RadioGroup>
+            </>: undefined }
             </> : 
             <>
             <p>
@@ -269,6 +293,9 @@ export default function Home() {
             </p>
             <p>
               <strong>Cheats</strong>: {config.cheats}
+            </p>
+            <p>
+              <strong>Timer</strong>: {config.timer}secs
             </p>
             <p>
               <strong>Timeout Punishment</strong>: {{
