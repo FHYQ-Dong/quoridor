@@ -11,3 +11,7 @@ html, body, body > div:first-child, .fill {
   margin-left: auto;
   margin-right: auto;
 }
+
+.mono {
+  font-family: "Menlo", "Consolas", "Courier New", monospace !important;
+}

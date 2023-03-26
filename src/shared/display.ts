@@ -1,11 +1,13 @@
 import { BoardChoice, DestroyChoice, Direction, GameState, MoveChoice, Orientation, Point } from "./common";
 
 export class GameDisplay {
-    context: CanvasRenderingContext2D
-    size: number
-    constructor(context: CanvasRenderingContext2D, size: number) {
+    readonly context: CanvasRenderingContext2D
+    readonly size: number
+    readonly replay: boolean
+    constructor(context: CanvasRenderingContext2D, size: number, replay?: boolean) {
         this.context = context;
         this.size = size;
+        this.replay = replay ?? false;
     }
     render(state: GameState) {
         this.context.fillStyle = 'white';
@@ -19,13 +21,23 @@ export class GameDisplay {
         const unit = this.getUnit(state.players.length);
         this.context.strokeStyle = 'black';
         this.context.lineWidth = 2;
+        this.context.textAlign = 'left';
+        this.context.textBaseline = 'top';
+        this.context.font = '12px sans-serif';
+        this.context.fillStyle = 'rgba(100, 0, 100)';
         this.context.beginPath();
         for (let i = 1; i < side; i++) {
             this.context.moveTo(i * unit, 0);
             this.context.lineTo(i * unit, this.size);
             this.context.moveTo(0, i * unit);
             this.context.lineTo(this.size, i * unit);
+            if (this.replay) {
+              this.context.fillText(i.toString(), i * unit + 2, 2);
+              this.context.fillText(i.toString(), 2, i * unit + 2);
+            }
         }
+        if (this.replay)
+          this.context.fillText('0', 2, 2);
         this.context.stroke();
         if (state.players.length === 2) {
             this.context.strokeStyle = 'red'

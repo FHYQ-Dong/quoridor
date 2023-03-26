@@ -1,4 +1,11 @@
-import { GameState, Point, Direction, Orientation, BoardState, pointEquals, BoardChoice, MoveChoice, beside, GameAction, leftSide, rightSide, DestroyChoice } from "./common";
+import { 
+    GameState, Point, Direction, Orientation, 
+    BoardState, pointEquals, BoardChoice, MoveChoice, 
+    beside, GameAction, leftSide, rightSide, 
+    DestroyChoice, MoveAction, BoardAction, ActionType, 
+    CheatAction, 
+    formatAction,
+    parseAction} from "./common";
 
 export interface GameConfig {
     players: number,
@@ -6,16 +13,26 @@ export interface GameConfig {
     cheats: number
 }
 
+export enum TimerElapsed {
+    LOSE, BOARD, CHEAT
+}
+
 export interface GameReplay {
-    config: GameConfig,
+    config: GameConfig & {
+        elapsed: TimerElapsed.LOSE | TimerElapsed.BOARD | TimerElapsed.CHEAT
+    },
     actions: GameAction[],
     name: string,
     time: Date
 }
 
+export interface SerializedGameReplay extends Omit<GameReplay, 'actions' | 'time'> {
+    actions: string[]
+    time: number
+}
+
 export class Game {
-    state: GameState
-    readonly side: number
+    readonly state: GameState
     readonly config: GameConfig
     constructor(config: GameConfig) {
         this.config = config;
@@ -24,7 +41,6 @@ export class Game {
             boards: []
         }
         if (this.config.players === 2) {
-            this.side = 9;
             this.state.players.push({
                 position: [4, 0],
                 boards: this.config.boards,
@@ -39,7 +55,6 @@ export class Game {
             });
         }
         else if (this.config.players === 4) {
-            this.side = 11;
             this.state.players.push({
                 position: [5, 0],
                 boards: this.config.boards,
@@ -66,6 +81,9 @@ export class Game {
             });
         }
         else throw new Error('invalid players count');
+    }
+    get side(): number {
+        return this.config.players === 4 ? 11 : 9;
     }
     validBoardAt(point: Point, direction: Direction): BoardState | undefined {
         if (direction === Direction.LEFT) {
@@ -385,5 +403,227 @@ export class Game {
             }
         }
         return false;
+    }
+    move(index: number, position: Point) {
+        this.state.players[index].position = position;
+    }
+    position(index: number): Point {
+        return this.state.players[index].position;
+    }
+    placeBoard(index: number, board: Omit<BoardState, 'destroyed'>) {
+        this.state.boards.push({
+            ...board,
+            destroyed: false
+        });
+        if (this.config.boards >= 0) 
+            this.state.players[index].boards -= 1;
+    }
+    hasBoard(index: number): boolean {
+        return this.state.players[index].boards !== 0;
+    }
+    canCheat(index: number): boolean {
+        return this.state.players[index].cheats > 0;
+    }
+    cheat(index: number) {
+        this.state.players[index].cheated = true;
+        this.state.players[index].cheats -= 1;
+    }
+    cheated(index: number): boolean {
+        return this.state.players[index].cheated;
+    }
+    additionalBoard(index: number) {
+        this.state.players[index].boards += 1;
+    }
+}
+
+export class ReplayManager {
+    readonly replay: GameReplay
+    readonly winners: number[]
+    readonly losers: number[]
+    turn: number
+    current: number
+    readonly state: GameState
+    private _extendedTurnLeft: number = 0;
+    constructor(replay: GameReplay) {
+        this.replay = replay;
+        this.winners = [];
+        this.losers = [];
+        this.current = -1;
+        this.turn = this.replay.config.players - 1;
+        this.state = {
+            players: [],
+            boards: []
+        }
+        if (this.replay.config.players === 2) {
+            this.state.players.push({
+                position: [4, 0],
+                boards: this.replay.config.boards,
+                cheats: this.replay.config.cheats,
+                cheated: false
+            });
+            this.state.players.push({
+                position: [4, 8],
+                boards: this.replay.config.boards,
+                cheats: this.replay.config.cheats,
+                cheated: false
+            });
+        }
+        else if (this.replay.config.players === 4) {
+            this.state.players.push({
+                position: [5, 0],
+                boards: this.replay.config.boards,
+                cheats: this.replay.config.cheats,
+                cheated: false
+            });
+            this.state.players.push({
+                position: [10, 5],
+                boards: this.replay.config.boards,
+                cheats: this.replay.config.cheats,
+                cheated: false
+            });
+            this.state.players.push({
+                position: [5, 10],
+                boards: this.replay.config.boards,
+                cheats: this.replay.config.cheats,
+                cheated: false
+            });
+            this.state.players.push({
+                position: [0, 5],
+                boards: this.replay.config.boards,
+                cheats: this.replay.config.cheats,
+                cheated: false
+            });
+        }
+        else throw new Error('invalid players count');
+    }
+    get side(): number {
+        return this.replay.config.players === 4 ? 11 : 9;
+    }
+    get steps(): number {
+        return this.replay.actions.length;
+    }
+    nextTurn() {
+        if (this._extendedTurnLeft) {
+            this._extendedTurnLeft -= 1;
+            return;
+        }
+        let nextTurn = this.turn;
+        do {
+            nextTurn = (nextTurn + 1) % this.replay.config.players;
+        } while (this.winners.includes(nextTurn) || this.losers.includes(nextTurn))
+        this.turn = nextTurn;
+    }
+    nextAction(): GameAction | undefined {
+        if (this.current >= this.steps - 1) return;
+        const action = this.replay.actions[++this.current];
+        this.nextTurn();
+        switch (action.type) {
+            case ActionType.MOVE:
+            case ActionType.JUMP: {
+                this.state.players[this.turn].position = 
+                    (action as MoveAction).to;
+                if (this._isWinner(this.turn)) {
+                    this.winners.push(this.turn);
+                }
+                break;
+            }
+            case ActionType.BOARD: {
+                this.state.players[this.turn].boards -= 1;
+                const cast = action as BoardAction;
+                this.state.boards.push({
+                    position: cast.position,
+                    orientation: cast.orientation,
+                    length: cast.length,
+                    destroyed: false
+                });
+                break;
+            }
+            case ActionType.SURRENDER: {
+                this.losers.push(this.turn);
+                this._extendedTurnLeft = 0;
+                break;
+            }
+            case ActionType.TIMEOUT: {
+                switch (this.replay.config.elapsed) {
+                    case TimerElapsed.LOSE: {
+                        this.losers.push(this.turn);
+                        this._extendedTurnLeft = 0;
+                        break;
+                    }
+                    case TimerElapsed.BOARD: {
+                        this.state.players[(this.turn + 1) % this.replay.config.players].boards += 1;
+                        break;
+                    }
+                    case TimerElapsed.CHEAT: {
+                        this.state.players[(this.turn + 1) % this.replay.config.players].cheats += 1;
+                        break;
+                    }
+                }
+                break;
+            }
+            case ActionType.CHEAT: {
+                const cast = action as CheatAction;
+                this._extendedTurnLeft++;
+                switch (cast.cheat) {
+                    case 'addboard': {
+                        this.state.players[this.turn].boards += 1;
+                        break;
+                    }
+                    case 'destroyer': {
+                        this.state.boards.find(board => 
+                            pointEquals(board.position, cast.parameters!.position) && 
+                            board.orientation === cast.parameters!.orientation)!.destroyed = true;
+                        this._extendedTurnLeft--;
+                        break;
+                    }
+                    case 'addround': {
+                        this._extendedTurnLeft++;
+                        break;
+                    }
+                }
+                this.state.players[this.turn].cheats -= 1;
+                this.state.players[this.turn].cheated = true;
+            }
+        }
+        return action;
+    }
+    private _isWinner(index: number): boolean {
+        if (this.replay.config.players === 2) {
+            if (index === 0) {
+                return this.state.players[0].position[1] >= this.side - 1;
+            }
+            else if (index === 1) {
+                return this.state.players[1].position[1] <= 0;
+            }
+        }
+        else if (this.replay.config.players === 4) {
+            if (index === 0) {
+                return this.state.players[0].position[1] >= this.side - 1;
+            }
+            else if (index === 1) {
+                return this.state.players[1].position[0] <= 0;
+            }
+            else if (index === 2) {
+                return this.state.players[2].position[1] <= 0;
+            }
+            else if (index === 3) {
+                return this.state.players[3].position[0] >= this.side - 1;
+            }
+        }
+        return false;
+    }
+    static serialize(replay: GameReplay): SerializedGameReplay {
+        return {
+            ...replay,
+            actions: replay.actions.map(formatAction),
+            time: replay.time.getTime()
+        }
+    }
+    static deserialize(replay: SerializedGameReplay): GameReplay {
+        return {
+            ...replay,
+            actions: replay.actions.map(parseAction),
+            time: new Date(replay.time)
+        }
     }
 }

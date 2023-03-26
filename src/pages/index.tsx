@@ -5,10 +5,13 @@ import {
   Checkbox, 
   Heading, Modal, ModalBody, 
   ModalContent, ModalFooter, 
-  ModalOverlay, NumberDecrementStepper, NumberIncrementStepper, NumberInput, NumberInputField, NumberInputStepper, Radio, RadioGroup, Stack, useDisclosure 
+  ModalOverlay, NumberDecrementStepper, NumberIncrementStepper, NumberInput, NumberInputField, NumberInputStepper, Popover, PopoverArrow, PopoverBody, PopoverCloseButton, PopoverContent, PopoverFooter, PopoverHeader, PopoverTrigger, Radio, RadioGroup, Stack, Text, useDisclosure, useToast 
 } from "@chakra-ui/react";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/tauri";
+import { SerializedGameReplay, TimerElapsed } from "@/shared/game";
+import { formatDate } from "@/shared/utils";
 
 export default function Home() {
   const gameModal = useDisclosure();
@@ -17,11 +20,21 @@ export default function Home() {
     boards: 10,
     cheats: 0,
     timer: 20*1000,
-    elapsed: 'board'
+    elapsed: TimerElapsed.BOARD
   });
   const [gameColor, setGameColor] = useState('orange.400');
   const [gamePreset, setGamePreset] = useState('Standard');
+  const [replays, setReplays] = useState<[string, SerializedGameReplay][]>([]);
   const router = useRouter();
+  const toast = useToast();
+  function loadReplays() {
+    invoke('list_replays').then(value => {
+      setReplays(value as [string, SerializedGameReplay][]);
+    })
+  }
+  useEffect(() => {
+    loadReplays();
+  }, []);
   return (
     <Box className="container" paddingTop="50px">
       <Stack direction="row">
@@ -40,7 +53,7 @@ export default function Home() {
               boards: 10,
               cheats: 0,
               timer: 20,
-              elapsed: 'board'
+              elapsed: TimerElapsed.BOARD
             });
             setGameColor('teal');
             setGamePreset('Customize');
@@ -51,7 +64,7 @@ export default function Home() {
       <Stack direction="row" gap="10px" marginTop="15px">
         <Card
           borderRadius="5px"
-          bg="orange.400"
+          bgGradient="linear(to-r, orange.400 80%, orange.500 100%)"
           color="white"
           width="25%"
           cursor="pointer"
@@ -61,7 +74,7 @@ export default function Home() {
               boards: 10,
               cheats: 0,
               timer: 20,
-              elapsed: 'board'
+              elapsed: TimerElapsed.BOARD
             });
             setGameColor('orange');
             setGamePreset('Standard');
@@ -78,7 +91,7 @@ export default function Home() {
         </Card>
         <Card
           borderRadius="5px"
-          bg="blue.400"
+          bgGradient="linear(to-r, blue.400 80%, blue.500 100%)"
           color="white"
           width="25%"
           cursor="pointer"
@@ -88,7 +101,7 @@ export default function Home() {
               boards: 10,
               cheats: 1,
               timer: 20,
-              elapsed: 'cheat'
+              elapsed: TimerElapsed.CHEAT
             });
             setGameColor('blue');
             setGamePreset('Cheatable');
@@ -105,7 +118,7 @@ export default function Home() {
         </Card>
         <Card
           borderRadius="5px"
-          bg="red.400"
+          bgGradient="linear(to-r, red.400 80%, red.500 100%)"
           color="white"
           width="25%"
           cursor="pointer"
@@ -115,7 +128,7 @@ export default function Home() {
               boards: -1,
               cheats: 0,
               timer: 20,
-              elapsed: 'lose'
+              elapsed: TimerElapsed.LOSE
             });
             setGameColor('red');
             setGamePreset('Unlimited Boards');
@@ -132,7 +145,7 @@ export default function Home() {
         </Card>
         <Card
           borderRadius="5px"
-          bg="green.400"
+          bgGradient="linear(to-r, green.400 80%, green.500 100%)"
           color="white"
           width="25%"
           cursor="pointer"
@@ -142,7 +155,7 @@ export default function Home() {
               boards: 7,
               cheats: 0,
               timer: 20,
-              elapsed: 'lose'
+              elapsed: TimerElapsed.LOSE
             });
             setGameColor('green');
             setGamePreset('Game with 4');
@@ -159,10 +172,80 @@ export default function Home() {
         </Card>
       </Stack>
       <Heading fontFamily="inherit" marginTop="30px">Replays</Heading>
+      { replays.length ? 
+      <Stack marginTop='15px' direction='column' gap='10px'>
+        {
+          replays.sort((a, b) => b[1].time - a[1].time).map(([id, replay]) => 
+          <Card bgGradient='linear(to-r, teal.500 40%, teal.50 70%)' color='white' 
+            paddingTop='15px' paddingBottom='15px'
+            paddingLeft='20px' paddingRight='20px'
+            key={id}>
+            <Stack direction='row'>
+              <Box flexGrow='1'>
+                <Text fontSize='12px' color='whiteAlpha.700'>
+                  Replay ID: {id}
+                </Text>
+                <Heading size='md'>{replay.name} ({formatDate(replay.time)})</Heading>
+              </Box>
+              <Stack direction='column' justifyContent='center'>
+                <Button variant='ghost' colorScheme='blue' leftIcon={
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M0 12V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm6.79-6.907A.5.5 0 0 0 6 5.5v5a.5.5 0 0 0 .79.407l3.5-2.5a.5.5 0 0 0 0-.814l-3.5-2.5z"/>
+                  </svg>
+                } onClick={() => {
+                  router.push(`/replay?id=${id}`);
+                }}>
+                  View
+                </Button>
+              </Stack>
+              <Stack direction='column' justifyContent='center'>
+                <Popover>
+                  <PopoverTrigger>
+                    <Button variant='ghost' colorScheme='red' leftIcon={
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0z"/>
+                      </svg>
+                    }>
+                      Delete
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent color='black'>
+                    <PopoverArrow/>
+                    <PopoverHeader>
+                      <strong>
+                        Confirmation
+                      </strong>
+                    </PopoverHeader>
+                    <PopoverCloseButton/>
+                    <PopoverBody>
+                      Are you sure you want to delete this replay?
+                    </PopoverBody>
+                    <PopoverFooter>
+                      <Button colorScheme='red' size='sm' float='right' onClick={() => {
+                        invoke('delete_replay', { id }).then(() => {
+                          loadReplays();
+                          toast({
+                            status: 'success',
+                            position: 'top',
+                            duration: 3000,
+                            title: 'Successfully deleted replay.',
+                            description: `Replay "${replay.name}" has been deleted.`
+                          })
+                        });
+                      }}>Yes</Button>
+                    </PopoverFooter>
+                  </PopoverContent>
+                </Popover>
+              </Stack>
+            </Stack>
+          </Card>)
+        }
+      </Stack> :
       <Alert status='info' variant='left-accent' marginTop='15px'>
         <AlertIcon />
-        Replays are currently under construction.
+        No replays available. Save your game via the "Save Replay" button.
       </Alert>
+      }
       <Modal isCentered isOpen={gameModal.isOpen} onClose={gameModal.onClose}>
         <ModalOverlay bg='blackAlpha.300' backdropFilter='blur(10px)'/>
         <ModalContent>
@@ -180,8 +263,8 @@ export default function Home() {
             </p>
             <RadioGroup defaultValue='2' onChange={e => {
               config.players = parseInt(e);
-              if (config.players === 4 && config.elapsed !== 'lose') {
-                config.elapsed = 'lose';
+              if (config.players === 4 && config.elapsed !== TimerElapsed.LOSE) {
+                config.elapsed = TimerElapsed.LOSE;
               }
               setConfig({ ...config });
             }}>
@@ -210,8 +293,8 @@ export default function Home() {
             : undefined}
             <Checkbox marginTop='3px' onChange={e => {
               config.boards = e.target.checked ? -1 : 10;
-              if (config.boards < 0 && config.elapsed === 'board') {
-                config.elapsed = 'lose';
+              if (config.boards < 0 && config.elapsed === TimerElapsed.BOARD) {
+                config.elapsed = TimerElapsed.LOSE;
               }
               setConfig({ ...config });
             }}>
@@ -222,8 +305,8 @@ export default function Home() {
             </p>
             <Checkbox onChange={e => {
               config.cheats = e.target.checked ? 1 : 0;
-              if (!config.cheats && config.elapsed === 'cheat') {
-                config.elapsed = 'lose';
+              if (!config.cheats && config.elapsed === TimerElapsed.CHEAT) {
+                config.elapsed = TimerElapsed.LOSE;
               }
               setConfig({ ...config });
             }} isChecked={config.cheats > 0}>
@@ -266,18 +349,18 @@ export default function Home() {
             <p style={{ marginTop: '5px' }}>
               <strong>Timeout Punishment</strong>
             </p>
-            <RadioGroup value={config.elapsed} onChange={e => {
-              config.elapsed = e;
+            <RadioGroup value={config.elapsed.toString()} onChange={e => {
+              config.elapsed = parseInt(e);
               setConfig({ ...config });
             }}>
               <Stack direction='column'>
-                <Radio value='lose'>
+                <Radio value='0'>
                   Surrender
                 </Radio>
-                <Radio value='board' isDisabled={config.players !== 2 || config.boards < 0}>
+                <Radio value='1' isDisabled={config.players !== 2 || config.boards < 0}>
                   +1 Board (opponent)
                 </Radio>
-                <Radio value='cheat' isDisabled={config.players !== 2 || config.cheats <= 0}>
+                <Radio value='2' isDisabled={config.players !== 2 || config.cheats <= 0}>
                   +1 Cheat (opponent)
                 </Radio>
               </Stack>
@@ -299,9 +382,9 @@ export default function Home() {
             </p>
             <p>
               <strong>Timeout Punishment</strong>: {{
-                'lose': 'Surrender',
-                'board': '+1 Board (opponent)',
-                'cheat': '+1 Cheat (opponent)'
+                [TimerElapsed.LOSE]: 'Surrender',
+                [TimerElapsed.BOARD]: '+1 Board (opponent)',
+                [TimerElapsed.CHEAT]: '+1 Cheat (opponent)'
               }[config.elapsed]}
             </p>
             </>

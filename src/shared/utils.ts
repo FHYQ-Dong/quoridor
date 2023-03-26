@@ -8,3 +8,19 @@ export function parseQuery(qs?: string): Record<string, string>{
     })
     return result;
 }
+
+export function asHexByte(n: number): string {
+    return n.toString(16).padStart(2, '0');
+}
+
+export function generateID(type: number, length?: number): string {
+    length = length ?? 6;
+    const array = new Uint8Array(length);
+    crypto.getRandomValues(array);
+    return asHexByte(type) + asHexByte(length) + Array.from(array).map(asHexByte).join('');
+}
+
+export function formatDate(timestamp: number): string {
+    const date = new Date(timestamp);
+    return `${date.getFullYear()}/${date.getMonth()}/${date.getDate()} ${date.getHours()}:${date.getMinutes()}`;
+}

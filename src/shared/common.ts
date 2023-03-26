@@ -8,14 +8,36 @@ export enum Direction {
     LEFT, TOP, RIGHT, BOTTOM
 }
 
+export enum ActionType {
+    MOVE, JUMP, BOARD, SURRENDER, TIMEOUT, CHEAT
+}
+
+export function formatPoint(point: Point): string {
+    return `(${point[0]},${point[1]})`;
+}
+
+export function parsePoint(repr: string): Point {
+    return repr.substring(1, repr.length-1).split(',').map(a => parseInt(a)) as Point;
+}
+
 export function formatOrientation(orientation: Orientation): string {
     return orientation === Orientation.HORIZONTAL ? 'H' : 'V';
+}
+
+export function parseOrientation(repr: string): Orientation {
+    return repr === 'H' ? Orientation.HORIZONTAL : Orientation.VERTICAL;
 }
 
 export function formatDirection(direction: Direction): string {
     return direction === Direction.LEFT ? 'L' :
         direction === Direction.TOP ? 'T' :
-        direction === Direction.RIGHT ? 'R' : 'B'
+        direction === Direction.RIGHT ? 'R' : 'B';
+}
+
+export function parseDirection(repr: string): Direction {
+    return repr === 'L' ? Direction.LEFT :
+        repr === 'T' ? Direction.TOP :
+        repr === 'R' ? Direction.RIGHT : Direction.BOTTOM;
 }
 
 export interface PlayerState {
@@ -54,42 +76,45 @@ export interface DestroyChoice {
 }
 
 export interface GameAction {
-    player: number,
-    type: string
+    type: ActionType
 }
 
 export interface MoveAction extends GameAction {
-    type: 'move',
+    type: ActionType.MOVE,
     to: Point
 }
 
 export interface JumpAction extends GameAction {
-    type: 'jump',
+    type: ActionType.JUMP,
     to: Point
 }
 
 export interface BoardAction extends GameAction {
-    type: 'board',
+    type: ActionType.BOARD,
     position: Point,
     orientation: Orientation,
     length: number
 }
 
 export interface SurrenderAction extends GameAction {
-    type: 'surrender'
+    type: ActionType.SURRENDER
 }
 
 export interface TimeoutAction extends GameAction {
-    type: 'timeout'
+    type: ActionType.TIMEOUT
 }
 
-export interface AddtionalBoardAction extends GameAction {
-    type: 'addboard'
+export interface DestroyerParameters {
+    position: Point,
+    orientation: Orientation
 }
 
-export interface DestroyerAction extends GameAction {
-    type: 'destroyer',
-    direction: Direction
+export type CheatType = 'addround' | 'addboard' | 'shortboard' | 'longboard' | 'destroyer';
+
+export interface CheatAction extends GameAction {
+    type: ActionType.CHEAT,
+    cheat: CheatType,
+    parameters?: DestroyerParameters
 }
 
 export function pointEquals(p1: Point, p2: Point): boolean {
@@ -114,30 +139,92 @@ export function beside(point: Point, direction: Direction, span?: number): Point
     }
 }
 
-export function formatAction(action: GameAction): string | undefined {
+export function formatAction(action: GameAction): string {
     switch (action.type) {
-        case 'move': {
+        case ActionType.MOVE: {
             const cast = (action as MoveAction);
-            return `@${cast.player} !move (${cast.to[0]}, ${cast.to[1]})`;
+            return `!move ${formatPoint(cast.to)}`;
         }
-        case 'jump': {
+        case ActionType.JUMP: {
             const cast = (action as JumpAction);
-            return `@${cast.player} !jump (${cast.to[0]}, ${cast.to[1]})`;
+            return `!jump ${formatPoint(cast.to)}`;
         }
-        case 'board': {
+        case ActionType.BOARD: {
             const cast = (action as BoardAction);
-            return `@${cast.player} !board (${cast.position[0]}, ${cast.position[1]}), ${formatOrientation(cast.orientation)}, ${cast.length}`;
+            return `!board ${formatPoint(cast.position)} ${formatOrientation(cast.orientation)} ${cast.length}`;
         }
-        case 'surrender': 
-        case 'timeout': 
-        case 'addboard': {
-            return `@${action.player} !${action.type}`;
+        case ActionType.SURRENDER: {
+            return '!surrender'
         }
-        case 'destroyer': {
-            const cast = (action as DestroyerAction);
-            return `@${cast.player} !destroyer ${formatDirection(cast.direction)}`;
+        case ActionType.TIMEOUT: {
+            return '!timeout';
+        }
+        case ActionType.CHEAT: {
+            const cast = (action as CheatAction);
+            switch (cast.cheat) {
+                case 'destroyer': {
+                    return `!cheat ${cast.cheat} ${formatPoint(cast.parameters!.position)} ${formatOrientation(cast.parameters!.orientation)}`;
+                }
+                default: {
+                    return `!cheat ${cast.cheat}`
+                }
+            }
         }
     }
+}
+
+export function parseAction(repr: string): GameAction {
+    if (repr.startsWith('!')) repr = repr.substring(1);
+    const [type, ...params] = repr.split(' ');
+    switch (type) {
+        case 'move': {
+            return {
+                type: ActionType.MOVE,
+                to: parsePoint(params[0])
+            } as MoveAction;
+        }
+        case 'jump': {
+            return {
+                type: ActionType.JUMP,
+                to: parsePoint(params[0])
+            } as JumpAction;
+        }
+        case 'board': {
+            return {
+                type: ActionType.BOARD,
+                position: parsePoint(params[0]),
+                orientation: parseOrientation(params[1]),
+                length: parseInt(params[2])
+            } as BoardAction;
+        }
+        case 'surrender': {
+            return {
+                type: ActionType.SURRENDER
+            } as SurrenderAction
+        }
+        case 'timeout': {
+            return {
+                type: ActionType.TIMEOUT
+            } as TimeoutAction;
+        }
+        case 'cheat': {
+            if (params[0] === 'destroyer') {
+                return {
+                    type: ActionType.CHEAT,
+                    cheat: 'destroyer',
+                    parameters: {
+                        position: parsePoint(params[1]),
+                        orientation: parseOrientation(params[2])
+                    }
+                } as CheatAction;
+            }
+            return {
+                type: ActionType.CHEAT,
+                cheat: params[0] as CheatType
+            } as CheatAction;
+        }
+    }
+    throw new Error('invalid action string: ' + repr);
 }
 
 export function leftSide(direction: Direction): Direction {
