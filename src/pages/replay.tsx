@@ -26,7 +26,7 @@ export default function Replay() {
     display?.render(manager!.state);
   }, [manager, current]);
   return (
-    <>
+    <Stack direction='column' className='fill'>
       <Stack direction='row' padding='20px' gap='20px'>
         <Stack direction='column' justifyContent='center'>
           <Button leftIcon={
@@ -73,70 +73,72 @@ export default function Replay() {
           </Popover>
         </Heading>
       </Stack>
-      <Stack direction='row' justifyContent='space-evenly'>
-        <Box>
-          <canvas id='canvas' width='550' height='550' style={{ border: '1px solid rgba(0, 0, 0, .2)'}}></canvas>
-        </Box>
-        <Stack textAlign='center' justifyContent='center' direction='column'>
+      <Stack direction='column' justifyContent='center' flexGrow='1'>
+        <Stack direction='row' justifyContent='space-evenly'>
           <Box>
-            <Heading size='md' marginBottom='10px'>
-              Current Step:
-            </Heading>
-            <Heading size='lg' fontWeight={400} marginBottom='10px' className="mono">
-              {current === -1 ? 'prepare' : formatAction(manager!.replay.actions[current])}
-            </Heading>
-            <p><small>{current+1} of {manager?.steps} steps</small></p>
-            <Stack direction='row' gap='5px' justifyContent='center' marginTop='10px'>
-              <Button isDisabled={current <= -1} onClick={() => {
-                setCurrent(current-1);
-                const newManager = new ReplayManager(manager!.replay);
-                for (let i = 0; i < current; i++) {
-                  newManager.nextAction();
-                }
-                setManager(newManager);
-              }}>&lt; Previous</Button>
-              <Button isDisabled={manager && current >= manager.steps - 1} onClick={() => {
-                setCurrent(current+1);
-                manager!.nextAction();
-              }}>Next &gt;</Button>
-            </Stack>
-            <Stack direction='row' marginTop='50px' gap='10px' justifyContent='center'>
-              { manager && manager.state.players.map((player, index) => 
-                <Box 
-                  key={index} 
-                  border='3px solid' borderColor={current >= 0 && manager.turn === index ? 'pink.400' : 'white'} borderRadius='10px' 
-                  padding='10px'>
-                  <Box 
-                  bg={['red.400', 'blue.400', 'green.400', 'yellow.400'][index]} width='50px' height='50px' borderRadius='50%'
-                  marginLeft='auto' marginRight='auto'></Box>
-                  <p>
-                    <strong>
-                      Player{index+1}
-                    </strong>
-                  </p>
-                  <p>
-                    <strong>
-                      Boards: {player.boards < 0 ? 'infinite' : player.boards}
-                    </strong>
-                  </p>
-                  <p>
-                    <strong>
-                      Cheats: {player.cheats}
-                    </strong>
-                  </p>
-                  <p>
-                    <strong>
-                      Cheated: {player.cheated ? 'yes': 'no'}
-                    </strong>
-                  </p>
-                  { manager.winners.includes(index)? <Text color='green.400'><strong>WINNER</strong></Text>: undefined }
-                  { manager.losers.includes(index)? <Text color='red.400'><strong>LOSER</strong></Text>: undefined }
-                </Box>)
-                }
-              </Stack>
+            <canvas id='canvas' width='550' height='550' style={{ border: '1px solid rgba(0, 0, 0, .2)'}}></canvas>
           </Box>
+          <Stack textAlign='center' justifyContent='center' direction='column'>
+            <Box>
+              <Heading size='md' marginBottom='10px'>
+                Current Step:
+              </Heading>
+              <Heading size='lg' fontWeight={400} marginBottom='10px' className="mono">
+                {current === -1 ? 'prepare' : formatAction(manager!.replay.actions[current])}
+              </Heading>
+              <p><small>{current+1} of {manager?.steps} steps</small></p>
+              <Stack direction='row' gap='5px' justifyContent='center' marginTop='10px'>
+                <Button isDisabled={current <= -1} onClick={() => {
+                  setCurrent(current-1);
+                  const newManager = new ReplayManager(manager!.replay);
+                  for (let i = 0; i < current; i++) {
+                    newManager.nextAction();
+                  }
+                  setManager(newManager);
+                }}>&lt; Previous</Button>
+                <Button isDisabled={manager && current >= manager.steps - 1} onClick={() => {
+                  setCurrent(current+1);
+                  manager!.nextAction();
+                }}>Next &gt;</Button>
+              </Stack>
+              <Stack direction='row' marginTop='50px' gap='10px' justifyContent='center'>
+                { manager && manager.state.players.map((player, index) => 
+                  <Box 
+                    key={index} 
+                    border='3px solid' borderColor={current >= 0 && manager.turn === index ? 'pink.400' : 'white'} borderRadius='10px' 
+                    padding='10px'>
+                    <Box 
+                    bg={['red.400', 'blue.400', 'green.400', 'yellow.400'][index]} width='50px' height='50px' borderRadius='50%'
+                    marginLeft='auto' marginRight='auto'></Box>
+                    <p>
+                      <strong>
+                        Player{index+1}
+                      </strong>
+                    </p>
+                    <p>
+                      <strong>
+                        Boards: {player.boards < 0 ? 'infinite' : player.boards}
+                      </strong>
+                    </p>
+                    <p>
+                      <strong>
+                        Cheats: {player.cheats}
+                      </strong>
+                    </p>
+                    <p>
+                      <strong>
+                        Cheated: {player.cheated ? 'yes': 'no'}
+                      </strong>
+                    </p>
+                    { manager.winners.includes(index)? <Text color='green.400'><strong>WINNER</strong></Text>: undefined }
+                    { manager.losers.includes(index)? <Text color='red.400'><strong>LOSER</strong></Text>: undefined }
+                  </Box>)
+                  }
+                </Stack>
+            </Box>
+          </Stack>
         </Stack>
       </Stack>
-    </>
+    </Stack>
   )
 }
