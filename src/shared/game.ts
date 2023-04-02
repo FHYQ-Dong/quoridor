@@ -1,11 +1,12 @@
-import { 
-    GameState, Point, Direction, Orientation, 
-    BoardState, pointEquals, BoardChoice, MoveChoice, 
-    beside, GameAction, leftSide, rightSide, 
-    DestroyChoice, MoveAction, BoardAction, ActionType, 
-    CheatAction, 
-    formatAction,
-    parseAction} from "./common";
+import {
+    GameState, Point, Direction, Orientation,
+    BoardState, pointEquals, BoardChoice, MoveChoice,
+    beside, GameAction, leftSide, rightSide,
+    DestroyChoice, MoveAction, BoardAction, ActionType,
+    CheatAction,
+    JumpAction,
+    CheatType
+} from "./common";
 
 export interface GameConfig {
     players: number,
@@ -17,18 +18,113 @@ export enum TimerElapsed {
     LOSE, BOARD, CHEAT
 }
 
-export interface GameReplay {
+export interface GameReplay<TAction = GameAction> {
     config: GameConfig & {
-        elapsed: TimerElapsed.LOSE | TimerElapsed.BOARD | TimerElapsed.CHEAT
+        elapsed: TimerElapsed
     },
-    actions: GameAction[],
+    actions: TAction[],
     name: string,
-    time: Date
+    time: number
 }
 
-export interface SerializedGameReplay extends Omit<GameReplay, 'actions' | 'time'> {
-    actions: string[]
-    time: number
+export type EncodedGameAction = (number | Point)[];
+
+export function encodeAction(action: GameAction): EncodedGameAction {
+    switch (action.type) {
+        case ActionType.MOVE: {
+            const cast = action as MoveAction;
+            return [action.type, cast.to];
+        }
+        case ActionType.JUMP: {
+            const cast = action as JumpAction;
+            return [action.type, cast.to];
+        }
+        case ActionType.BOARD: {
+            const cast = action as BoardAction;
+            return [action.type, cast.position, cast.orientation, cast.length];
+        }
+        case ActionType.SURRENDER:
+        case ActionType.TIMEOUT: {
+            return [action.type];
+        }
+        case ActionType.CHEAT: {
+            const cast = action as CheatAction;
+            switch (cast.cheat) {
+                case CheatType.DESTROYER: {
+                    return [action.type, cast.cheat, cast.parameters!.position, cast.parameters!.orientation];
+                }
+                default: {
+                    return [action.type, cast.cheat];
+                }
+            }
+        }
+    }
+}
+
+export function decodeAction(action: EncodedGameAction): GameAction {
+    switch (action[0]) {
+        case ActionType.MOVE: {
+            return {
+                type: action[0],
+                to: action[1]
+            } as MoveAction;
+        }
+        case ActionType.JUMP: {
+            return {
+                type: action[0],
+                to: action[1]
+            } as JumpAction;
+        }
+        case ActionType.BOARD: {
+            return {
+                type: action[0],
+                position: action[1],
+                orientation: action[2],
+                length: action[3]
+            } as BoardAction;
+        }
+        case ActionType.SURRENDER:
+        case ActionType.TIMEOUT: {
+            return {
+                type: action[0]
+            }
+        }
+        case ActionType.CHEAT: {
+            switch (action[1]) {
+                case CheatType.DESTROYER: {
+                    return {
+                        type: action[0],
+                        cheat: action[1],
+                        parameters: {
+                            position: action[2],
+                            orientation: action[3]
+                        }
+                    } as CheatAction;
+                }
+                default: {
+                    return {
+                        type: action[0],
+                        cheat: action[1]
+                    } as CheatAction;
+                }
+            }
+        }
+    }
+    throw new Error('invalid encoded action.');
+}
+
+export function encodeReplay(replay: GameReplay): GameReplay<EncodedGameAction> {
+    return {
+        ...replay,
+        actions: replay.actions.map(encodeAction)
+    };
+}
+
+export function decodeReplay(replay: GameReplay<EncodedGameAction>): GameReplay {
+    return {
+        ...replay,
+        actions: replay.actions.map(decodeAction)
+    };
 }
 
 export class Game {
@@ -87,38 +183,38 @@ export class Game {
     }
     validBoardAt(point: Point, direction: Direction): BoardState | undefined {
         if (direction === Direction.LEFT) {
-            return this.state.boards.find(board => 
+            return this.state.boards.find(board =>
                 !board.destroyed &&
-                board.orientation === Orientation.VERTICAL && 
-                board.position[0] === point[0] && 
-                board.position[1] > point[1]-board.length &&
+                board.orientation === Orientation.VERTICAL &&
+                board.position[0] === point[0] &&
+                board.position[1] > point[1] - board.length &&
                 board.position[1] <= point[1]
             )
         }
         if (direction === Direction.RIGHT) {
-            return this.state.boards.find(board => 
+            return this.state.boards.find(board =>
                 !board.destroyed &&
-                board.orientation === Orientation.VERTICAL && 
-                board.position[0] === point[0]+1 && 
-                board.position[1] > point[1]-board.length &&
+                board.orientation === Orientation.VERTICAL &&
+                board.position[0] === point[0] + 1 &&
+                board.position[1] > point[1] - board.length &&
                 board.position[1] <= point[1]
             )
         }
         if (direction === Direction.TOP) {
-            return this.state.boards.find(board => 
+            return this.state.boards.find(board =>
                 !board.destroyed &&
-                board.orientation === Orientation.HORIZONTAL && 
-                board.position[1] === point[1] && 
-                board.position[0] > point[0]-board.length &&
+                board.orientation === Orientation.HORIZONTAL &&
+                board.position[1] === point[1] &&
+                board.position[0] > point[0] - board.length &&
                 board.position[0] <= point[0]
             )
         }
         if (direction === Direction.BOTTOM) {
-            return this.state.boards.find(board => 
+            return this.state.boards.find(board =>
                 !board.destroyed &&
-                board.orientation === Orientation.HORIZONTAL && 
-                board.position[1] === point[1]+1 && 
-                board.position[0] > point[0]-board.length &&
+                board.orientation === Orientation.HORIZONTAL &&
+                board.position[1] === point[1] + 1 &&
+                board.position[0] > point[0] - board.length &&
                 board.position[0] <= point[0]
             )
         }
@@ -144,7 +240,8 @@ export class Game {
         }
         return true; // why?
     }
-    validGame() {
+    validGame(ignorePlayers?: number[]) {
+        ignorePlayers = ignorePlayers ?? [];
         let painted: Point[];
         function in_(pos: Point) {
             return painted.some(x => pointEquals(x, pos));
@@ -168,30 +265,42 @@ export class Game {
             }
         }
         if (this.state.players.length === 2) {
-            painted = [];
-            paint(this.state.players[0].position)
-            if (!painted.some(x => x[1] == this.side - 1)) return false;
-            painted = [];
-            paint(this.state.players[1].position)
-            if (!painted.some(x => x[1] == 0)) return false;
+            if (!ignorePlayers.includes(0)) {
+                painted = [];
+                paint(this.state.players[0].position);
+                if (!painted.some(x => x[1] == this.side - 1)) return false;
+            }
+            if (!ignorePlayers.includes(1)) {
+                painted = [];
+                paint(this.state.players[1].position)
+                if (!painted.some(x => x[1] == 0)) return false;
+            }
         }
         else if (this.state.players.length === 4) {
-            painted = [];
-            paint(this.state.players[0].position)
-            if (!painted.some(x => x[1] == this.side - 1)) return false;
-            painted = [];
-            paint(this.state.players[1].position)
-            if (!painted.some(x => x[0] == 0)) return false;
-            painted = [];
-            paint(this.state.players[2].position)
-            if (!painted.some(x => x[1] == 0)) return false;
-            painted = [];
-            paint(this.state.players[3].position)
-            if (!painted.some(x => x[0] == this.side - 1)) return false;
+            if (!ignorePlayers.includes(0)) {
+                painted = [];
+                paint(this.state.players[0].position)
+                if (!painted.some(x => x[1] == this.side - 1)) return false;
+            }
+            if (!ignorePlayers.includes(1)) {
+                painted = [];
+                paint(this.state.players[1].position)
+                if (!painted.some(x => x[0] == 0)) return false;
+            }
+            if (!ignorePlayers.includes(2)) {
+                painted = [];
+                paint(this.state.players[2].position)
+                if (!painted.some(x => x[1] == 0)) return false;
+            }
+            if (!ignorePlayers.includes(3)) {
+                painted = [];
+                paint(this.state.players[3].position)
+                if (!painted.some(x => x[0] == this.side - 1)) return false;
+            }
         }
         return true;
     }
-    boardChoices(position: Point, length: number) {
+    boardChoices(position: Point, length: number, ignorePlayers?: number[]) {
         const candidates: BoardChoice[] = [];
         if (position[0] >= length && this.validBoardPlace([position[0] - length, position[1]], Orientation.HORIZONTAL, length)) {
             candidates.push({
@@ -229,7 +338,7 @@ export class Game {
                 length: length,
                 destroyed: false
             });
-            if (this.validGame()) {
+            if (this.validGame(ignorePlayers)) {
                 result.push(can);
             }
             this.state.boards.splice(this.state.boards.length - 1, 1);
@@ -272,8 +381,8 @@ export class Game {
         switch (direction) {
             case Direction.LEFT: return point[0];
             case Direction.TOP: return point[1];
-            case Direction.RIGHT: return this.side-point[0]-1;
-            case Direction.BOTTOM: return this.side-point[1]-1;
+            case Direction.RIGHT: return this.side - point[0] - 1;
+            case Direction.BOTTOM: return this.side - point[1] - 1;
         }
     }
     jumpChoices(point: Point, previous?: Direction, depth?: number): MoveChoice[] {
@@ -327,7 +436,7 @@ export class Game {
                 })
             }
         }
-        const canJump = (direction: Direction) => 
+        const canJump = (direction: Direction) =>
             this.hasPlayerAt(beside(point, direction)) && !this.validBoardAt(point, direction);
         const candidates: MoveChoice[] = [];
         if (previous !== undefined) {
@@ -415,7 +524,7 @@ export class Game {
             ...board,
             destroyed: false
         });
-        if (this.config.boards >= 0) 
+        if (this.config.boards >= 0)
             this.state.players[index].boards -= 1;
     }
     hasBoard(index: number): boolean {
@@ -520,7 +629,7 @@ export class ReplayManager {
         switch (action.type) {
             case ActionType.MOVE:
             case ActionType.JUMP: {
-                this.state.players[this.turn].position = 
+                this.state.players[this.turn].position =
                     (action as MoveAction).to;
                 if (this._isWinner(this.turn)) {
                     this.winners.push(this.turn);
@@ -565,18 +674,18 @@ export class ReplayManager {
                 const cast = action as CheatAction;
                 this._extendedTurnLeft++;
                 switch (cast.cheat) {
-                    case 'addboard': {
+                    case CheatType.ADDBOARD: {
                         this.state.players[this.turn].boards += 1;
                         break;
                     }
-                    case 'destroyer': {
-                        this.state.boards.find(board => 
-                            pointEquals(board.position, cast.parameters!.position) && 
+                    case CheatType.DESTROYER: {
+                        this.state.boards.find(board =>
+                            pointEquals(board.position, cast.parameters!.position) &&
                             board.orientation === cast.parameters!.orientation)!.destroyed = true;
                         this._extendedTurnLeft--;
                         break;
                     }
-                    case 'addround': {
+                    case CheatType.ADDROUND: {
                         this._extendedTurnLeft++;
                         break;
                     }
@@ -611,19 +720,5 @@ export class ReplayManager {
             }
         }
         return false;
-    }
-    static serialize(replay: GameReplay): SerializedGameReplay {
-        return {
-            ...replay,
-            actions: replay.actions.map(formatAction),
-            time: replay.time.getTime()
-        }
-    }
-    static deserialize(replay: SerializedGameReplay): GameReplay {
-        return {
-            ...replay,
-            actions: replay.actions.map(parseAction),
-            time: new Date(replay.time)
-        }
     }
 }

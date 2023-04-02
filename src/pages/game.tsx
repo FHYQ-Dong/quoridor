@@ -1,6 +1,6 @@
-import { ActionType, BoardAction, CheatAction, Direction, GameAction, JumpAction, MoveAction, pointEquals } from "@/shared/common";
+import { ActionType, BoardAction, CheatAction, CheatType, Direction, GameAction, JumpAction, MoveAction, pointEquals } from "@/shared/common";
 import { GameDisplay } from "@/shared/display";
-import { Game as GameLogic, ReplayManager, TimerElapsed } from "@/shared/game";
+import { encodeAction, Game as GameLogic, TimerElapsed } from "@/shared/game";
 import timer from "@/shared/timer";
 import { generateID, parseQuery } from "@/shared/utils";
 import { Box, Button, Card, CardBody, Heading, Input, Modal, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalOverlay, Stack, Text, useDisclosure, useToast } from "@chakra-ui/react";
@@ -113,7 +113,7 @@ export default function Game() {
           board.destroyed = true;
           actions.current.push({
             type: ActionType.CHEAT,
-            cheat: 'destroyer',
+            cheat: CheatType.DESTROYER,
             parameters: {
               position: board.position,
               orientation: board.orientation
@@ -182,7 +182,7 @@ export default function Game() {
           gameDisplay?.renderBoardChoices(
             game!.state,
             [x, y],
-            choices = game!.boardChoices([x, y], nextBoardLength)
+            choices = game!.boardChoices([x, y], nextBoardLength, losers)
           )
           current = 'board';
         }
@@ -386,7 +386,7 @@ export default function Game() {
                       setExtendedRound(true);
                       actions.current.push({
                         type: ActionType.CHEAT,
-                        cheat: 'addround'
+                        cheat: CheatType.ADDROUND
                       } as CheatAction)
                       game!.cheat(gameTurn);
                     }} isDisabled={extendedRound}>Use!</Button>
@@ -407,7 +407,7 @@ export default function Game() {
                       game!.additionalBoard(gameTurn);
                       actions.current.push({
                         type: ActionType.CHEAT,
-                        cheat: 'addboard'
+                        cheat: CheatType.ADDBOARD
                       } as CheatAction)
                       game!.cheat(gameTurn);
                     }}>Use!</Button>
@@ -426,7 +426,7 @@ export default function Game() {
                       setNextBoardLength(1);
                       actions.current.push({
                         type: ActionType.CHEAT,
-                        cheat: 'shortboard'
+                        cheat: CheatType.SHORTBOARD
                       } as CheatAction)
                       game!.cheat(gameTurn);
                     }}>Use!</Button>
@@ -445,7 +445,7 @@ export default function Game() {
                       setNextBoardLength(3);
                       actions.current.push({
                         type: ActionType.CHEAT,
-                        cheat: 'longboard'
+                        cheat: CheatType.LONGBOARD
                       } as CheatAction)
                       game!.cheat(gameTurn);
                     }}>Use!</Button>
@@ -515,18 +515,19 @@ export default function Game() {
             <Input flexGrow='1' placeholder='Replay name' onChange={e => {
               setReplayName(e.target.value);
             }}/>
-            <Button colorScheme='green' onClick={() => {
-              invoke('put_replay', { replay: ReplayManager.serialize({
+            <Button colorScheme='green' 
+            isDisabled={replayName === ''} onClick={() => {
+              invoke('put_replay', { replay: {
                 name: replayName,
-                time: new Date(),
-                actions: actions.current,
+                time: Date.now(),
+                actions: actions.current.map(encodeAction),
                 config: {
                   players: config.players,
                   boards: config.boards,
                   cheats: config.cheats,
                   elapsed: config.elapsed
                 }
-              }), id: generateID(1) }).then(() => {
+              }, id: generateID(1) }).then(() => {
                 setSavingReplay(false);
                 toast({
                   status: 'success',

@@ -1,6 +1,6 @@
 import { formatAction } from "@/shared/common";
 import { GameDisplay } from "@/shared/display";
-import { ReplayManager, SerializedGameReplay, TimerElapsed } from "@/shared/game";
+import { ReplayManager, TimerElapsed, decodeReplay, GameReplay, EncodedGameAction } from "@/shared/game";
 import { parseQuery } from "@/shared/utils";
 import { Box, Button, Heading, Popover, PopoverArrow, PopoverBody, PopoverContent, PopoverTrigger, Portal, Stack, Text } from "@chakra-ui/react";
 import { invoke } from "@tauri-apps/api/tauri";
@@ -17,7 +17,7 @@ export default function Replay() {
     const extractedId = parseQuery().id;
     setId(extractedId);
     invoke('get_replay', { id: extractedId }).then(replay => {
-      const manager = new ReplayManager(ReplayManager.deserialize(replay as SerializedGameReplay));
+      const manager = new ReplayManager(decodeReplay(replay as GameReplay<EncodedGameAction>));
       setManager(manager);
       setDisplay(new GameDisplay((document.getElementById('canvas') as HTMLCanvasElement).getContext('2d')!, 550, true));
     })

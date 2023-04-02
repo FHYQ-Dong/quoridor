@@ -5,31 +5,14 @@
 
 use std::{path::Path, fs::File, fs};
 
-use serde::{Serialize, Deserialize};
-use serde_cbor::{from_reader, to_writer};
-
-#[derive(Serialize, Deserialize)]
-struct ReplayConfig {
-  players: i32,
-  boards: i32,
-  cheats: i32,
-  elapsed: i32
-}
-
-#[derive(Serialize, Deserialize)]
-struct GameReplay {
-  name: String,
-  time: u64,
-  config: ReplayConfig,
-  actions: Vec<String>
-}
+use serde_cbor::{from_reader, to_writer, Value};
 
 const QUORIDOR_PATH: &str = "./.quoridor";
 const REPLAY_PATH: &str = "./.quoridor/replays";
 
 #[tauri::command]
-fn list_replays() -> Vec<(String, GameReplay)> {
-  let mut result: Vec<(String, GameReplay)> = Vec::new();
+fn list_replays() -> Vec<(String, Value)> {
+  let mut result: Vec<(String, Value)> = Vec::new();
   for entry in Path::new(REPLAY_PATH).read_dir().unwrap() {
     if let Ok(entry) = entry {
       result.push((
@@ -43,14 +26,14 @@ fn list_replays() -> Vec<(String, GameReplay)> {
 }
 
 #[tauri::command]
-fn get_replay(id: String) -> GameReplay {
+fn get_replay(id: String) -> Value {
   let mut file_name = id.clone();
   file_name.push_str(".cbor");
   from_reader(File::open(Path::new(REPLAY_PATH).join(file_name)).unwrap()).unwrap()
 }
 
 #[tauri::command]
-fn put_replay(id: String, replay: GameReplay) {
+fn put_replay(id: String, replay: Value) {
   let mut file_name = id.clone();
   file_name.push_str(".cbor");
   to_writer(File::create(Path::new(REPLAY_PATH).join(file_name)).unwrap(), &replay).unwrap();

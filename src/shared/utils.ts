@@ -22,5 +22,5 @@ export function generateID(type: number, length?: number): string {
 
 export function formatDate(timestamp: number): string {
     const date = new Date(timestamp);
-    return `${date.getFullYear()}/${date.getMonth()}/${date.getDate()} ${date.getHours()}:${date.getMinutes()}`;
+    return `${date.getFullYear()}/${date.getMonth()}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 }

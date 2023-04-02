@@ -10,8 +10,10 @@ import {
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/tauri";
-import { SerializedGameReplay, TimerElapsed } from "@/shared/game";
+import { EncodedGameAction, GameReplay, TimerElapsed } from "@/shared/game";
 import { formatDate } from "@/shared/utils";
+
+type ReplayEntry = [string, GameReplay<EncodedGameAction>];
 
 export default function Home() {
   const gameModal = useDisclosure();
@@ -24,12 +26,12 @@ export default function Home() {
   });
   const [gameColor, setGameColor] = useState('orange.400');
   const [gamePreset, setGamePreset] = useState('Standard');
-  const [replays, setReplays] = useState<[string, SerializedGameReplay][]>([]);
+  const [replays, setReplays] = useState<ReplayEntry[]>([]);
   const router = useRouter();
   const toast = useToast();
   function loadReplays() {
     invoke('list_replays').then(value => {
-      setReplays(value as [string, SerializedGameReplay][]);
+      setReplays(value as ReplayEntry[]);
     })
   }
   useEffect(() => {
@@ -41,12 +43,22 @@ export default function Home() {
         <Box flexGrow="1">
           <Heading fontFamily="inherit">Game Play</Heading>
         </Box>
+        <Stack justifyContent='center'>
+          <Button leftIcon={
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h13zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13z"/>
+            <path d="M3 5.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM3 8a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 8zm0 2.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5z"/>
+          </svg>
+          } colorScheme='gray' variant='ghost' onClick={() => {
+            router.push('/rules');
+          }}>Rules</Button>
+        </Stack>
         <Stack justifyContent="center">
           <Button leftIcon={
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
               <path fillRule="evenodd" d="M10.5 1a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V4H1.5a.5.5 0 0 1 0-1H10V1.5a.5.5 0 0 1 .5-.5ZM12 3.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Zm-6.5 2A.5.5 0 0 1 6 6v1.5h8.5a.5.5 0 0 1 0 1H6V10a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5ZM1 8a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2A.5.5 0 0 1 1 8Zm9.5 2a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V13H1.5a.5.5 0 0 1 0-1H10v-1.5a.5.5 0 0 1 .5-.5Zm1.5 2.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5Z" />
             </svg>
-          } colorScheme="teal" variant="outline"
+          } colorScheme="teal"
           onClick={() => {
             setConfig({
               players: 2,
