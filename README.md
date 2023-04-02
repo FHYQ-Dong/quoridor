@@ -1,9 +1,3 @@
-<style>
-    img {
-        display: block;
-        max-width: 500px !important;
-    }
-</style>
 # Quoridor Handbook v1
 
 ## 1. Basic Rules
