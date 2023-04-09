@@ -214,7 +214,7 @@ export default function Game() {
             break;
           }
           case TimerElapsed.CHEAT: {
-            game!.additionalBoard((gameTurn + 1) % config.players);
+            game!.additionalCheat((gameTurn + 1) % config.players);
             break;
           }
         }

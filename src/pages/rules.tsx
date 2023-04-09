@@ -257,7 +257,7 @@ function EnglishVersion() {
       You can save your game replay by clicking the "Save Replay" button in the results dialog and specifying a name.
     </Text>
     <Text textIndent="50px" marginTop='10px'>
-      In the lobby, you can find your replay in the "Game Replays" section.
+      In the lobby, you can find your replay in the "Replays" section.
     </Text>
     <Text textIndent="50px" marginTop='10px'>
       In the replay, every step is represented using the QRA (Quoridor Replay Actions) format, that is:
@@ -522,7 +522,7 @@ function ChineseVersion() {
       您可以通过点击”Save Replay“按钮并指定回放名称来保存游戏回放。
     </Text>
     <Text textIndent="50px" marginTop='10px'>
-      在主页，您可以在”Game Replays“板块找到您的回放。
+      在主页，您可以在”Replays“板块找到您的回放。
     </Text>
     <Text textIndent="50px" marginTop='10px'>
       回放当中，每一步将会用 QRA 格式表示：

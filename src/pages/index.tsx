@@ -5,13 +5,14 @@ import {
   Checkbox, 
   Heading, Modal, ModalBody, 
   ModalContent, ModalFooter, 
-  ModalOverlay, NumberDecrementStepper, NumberIncrementStepper, NumberInput, NumberInputField, NumberInputStepper, Popover, PopoverArrow, PopoverBody, PopoverCloseButton, PopoverContent, PopoverFooter, PopoverHeader, PopoverTrigger, Radio, RadioGroup, Stack, Text, useDisclosure, useToast 
+  ModalOverlay, Popover, PopoverArrow, PopoverBody, PopoverCloseButton, PopoverContent, PopoverFooter, PopoverHeader, PopoverTrigger, Radio, RadioGroup, Stack, Text, useDisclosure, useToast 
 } from "@chakra-ui/react";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/tauri";
 import { EncodedGameAction, GameReplay, TimerElapsed } from "@/shared/game";
 import { formatDate } from "@/shared/utils";
+import CNumberInput from "@/components/CNumberInput";
 
 type ReplayEntry = [string, GameReplay<EncodedGameAction>];
 
@@ -292,24 +293,18 @@ export default function Home() {
             <p style={{ marginTop: '5px' }}>
               <strong>Boards</strong>
             </p>
-            {config.boards >= 0 ? <NumberInput value={config.boards} min={1} isDisabled={config.boards < 0} onChange={(_, n) => {
+            {config.boards >= 0 ? <CNumberInput defaultValue={config.boards} min={1} onBlur={n => {
               config.boards = n;
               setConfig({ ...config });
-            }}>
-              <NumberInputField />
-              <NumberInputStepper>
-                <NumberIncrementStepper />
-                <NumberDecrementStepper />
-              </NumberInputStepper>
-            </NumberInput>
-            : undefined}
+            }} id='boardcount'/>
+            : undefined }
             <Checkbox marginTop='3px' onChange={e => {
               config.boards = e.target.checked ? -1 : 10;
               if (config.boards < 0 && config.elapsed === TimerElapsed.BOARD) {
                 config.elapsed = TimerElapsed.LOSE;
               }
               setConfig({ ...config });
-            }}>
+            }} isChecked={config.boards < 0}>
               Infinite Boards
             </Checkbox>
             <p style={{ marginTop: '5px' }}>
@@ -325,17 +320,11 @@ export default function Home() {
               Enable Cheating
             </Checkbox>
             { config.cheats > 0 ?
-            <NumberInput value={config.cheats} min={1} 
-            onChange={(_, n) => {
+            <CNumberInput defaultValue={config.cheats} min={1} 
+            onBlur={n => {
               config.cheats = n;
               setConfig({ ...config });
-            }}>
-              <NumberInputField />
-              <NumberInputStepper>
-                <NumberIncrementStepper />
-                <NumberDecrementStepper />
-              </NumberInputStepper>
-            </NumberInput>
+            }} id='cheatcount'/>
             : undefined}
             <p style={{ marginTop: '5px' }}>
               <strong>Timer</strong>
@@ -347,17 +336,11 @@ export default function Home() {
               Enable Timer
             </Checkbox>
             { config.timer > 0 ? <>
-            <NumberInput value={config.timer} min={1} 
-            onChange={(_, n) => {
+            <CNumberInput defaultValue={config.timer} min={1} 
+            onBlur={n => {
               config.timer = n;
               setConfig({ ...config });
-            }}>
-              <NumberInputField />
-              <NumberInputStepper>
-                <NumberIncrementStepper />
-                <NumberDecrementStepper />
-              </NumberInputStepper>
-            </NumberInput>
+            }} id='timervalue'/>
             <p style={{ marginTop: '5px' }}>
               <strong>Timeout Punishment</strong>
             </p>

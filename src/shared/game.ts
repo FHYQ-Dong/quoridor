@@ -543,6 +543,9 @@ export class Game {
     additionalBoard(index: number) {
         this.state.players[index].boards += 1;
     }
+    additionalCheat(index: number) {
+        this.state.players[index].cheats += 1;
+    }
 }
 
 export class ReplayManager {
