@@ -1,0 +1,4 @@
+name: 'Quoridor'
+
+on: 
+    workflow_dispatch:
